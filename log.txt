@@ -1,0 +1,28 @@
+
+Necessary arguments are missing.
+Instead of promting you to use the -h argument, I'll just do that for you:
+
+============PARAMETERS:============
+
+-s [or --search] search for manga
+
+-d [or --download] download or update manga (tile or url)
+
+-u [or --update] update manga-dir
+
+-r [or --refresh] refresh metadata (whole dir or specified manga)).
+
+-n [or --noinput] program won't ask for permission to download manga
+
+-m [or --metaout] specifies where metadata will be saved. Default is mangadir. Can be called mulitple times.
+
+-o [or --output] specifies output dir (where your manga are), needed if no cfg-file exists
+
+
+--dumpsearch <blank> dumps info for mangafox top50 manga into tmp-dir.
+
+--dumpsearch <title> dumps info for search-results into tmp-dir.
+--dumpmal <username> dumps plan-to-read list for MAL-user into tmp-dir.
+
+===================================
+
