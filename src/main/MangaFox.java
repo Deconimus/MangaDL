@@ -10,8 +10,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
@@ -601,7 +603,8 @@ public class MangaFox {
 							chapdir.delete();
 							
 						} else if (chapname != null && chapname.length() > 0 && !chapdir.getName().toLowerCase()
-								   .substring(chapdir.getName().indexOf(" -")).trim().equals((" - "+chapname).trim().toLowerCase())) {
+								   .substring(chapdir.getName().indexOf(" -")).trim().equals((" - "+chapname).trim().toLowerCase()) &&
+								   !(new File(chapdir.getAbsolutePath()+"/.renamed").exists())) {
 							
 							System.out.println("Renaming \""+chapdir.getName()+"\" to \""+(chapnrstr+" - "+chapname).trim()+"\"\n");
 							
@@ -652,9 +655,7 @@ public class MangaFox {
 						} catch (Exception | Error e) { e.printStackTrace(); }
 						
 						System.out.println();
-						
 					}
-					
 				}
 				
 			}
@@ -765,7 +766,11 @@ public class MangaFox {
 				f = "<a href=";
 				html = html.substring(html.indexOf(f)+f.length());
 				
-				String imgurl = html.substring(html.indexOf("<img src=")+10, html.indexOf(".jpg")+4);
+				f = ">";
+				html = html.substring(html.indexOf(f)+f.length());
+				
+				String imgurl = html.substring(html.indexOf("<img src=")+10, html.indexOf("width="));
+				imgurl = imgurl.substring(0, imgurl.indexOf("\""));
 				
 				File out = new File(chapdir.getAbsolutePath()+"/"+imgnrstr+".jpg");
 				

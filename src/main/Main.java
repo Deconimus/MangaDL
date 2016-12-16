@@ -467,6 +467,14 @@ public class Main {
 	
 	public static void help() {
 		
+		System.out.println("  __  __                         _____  _      ");
+		System.out.println(" |  \\/  |                       |  __ \\| |     ");
+		System.out.println(" | \\  / | __ _ _ __   __ _  __ _| |  | | |     ");
+		System.out.println(" | |\\/| |/ _` | '_ \\ / _` |/ _` | |  | | |     ");
+		System.out.println(" | |  | | (_| | | | | (_| | (_| | |__| | |____ ");
+		System.out.println(" |_|  |_|\\__,_|_| |_|\\__, |\\__,_|_____/|______|");
+		System.out.println("                      __/ |                    ");
+		System.out.println("                     |___/                     ");
 		System.out.println();
 		System.out.println("============PARAMETERS:============");
 		System.out.println();
