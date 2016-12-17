@@ -26,7 +26,7 @@ import visionCore.util.Files;
 public class Main {
 
 	public static final int MODE_SEARCH = 0, MODE_DOWNLOAD = 1, MODE_URL_DOWNLOAD = 2, MODE_UPDATE = 3, MODE_REFRESH = 4, 
-							MODE_DUMP_SEARCH = 5, MODE_DUMP_MAL = 6;
+							MODE_DUMP_SEARCH = 5, MODE_DUMP_MAL = 6, MODE_DOWNLOAD_CHAPTER = 7;
 	
 	public static String title, mangapath;
 	public static boolean noUserInput = false;
@@ -196,6 +196,43 @@ public class Main {
 			
 			dumpMAL(title);
 			
+		} else if (mode == MODE_DOWNLOAD_CHAPTER) {
+			
+			if (title.contains("mangafox.me")) {
+				
+				String chapNr = title;
+				
+				if (title.endsWith(".html")) {
+					
+					chapNr = chapNr.substring(0, chapNr.lastIndexOf("/"));
+					chapNr = chapNr.substring(chapNr.lastIndexOf("/c")+2).trim();
+				}
+				
+				File chapdir = new File(abspath+"/downloaded/"+chapNr);
+				if (chapdir.exists()) { Files.cleanseDir(chapdir); chapdir.delete(); }
+				chapdir.mkdirs();
+				
+				MangaFox.saveChapter("", "", title, chapdir);
+				
+			} else if (title.contains("mangaseeonline.net")) {
+				
+				if (title.contains("-page-")) {
+					
+					title = title.substring(0, title.lastIndexOf("-page-"))+".html";
+				}
+				
+				String chapNr = title.substring(title.lastIndexOf("-")+1, title.lastIndexOf(".html")).trim();
+				
+				File chapdir = new File(abspath+"/downloaded/"+chapNr);
+				if (chapdir.exists()) { Files.cleanseDir(chapdir); chapdir.delete(); }
+				chapdir.mkdirs();
+				
+				MangaSeeOnline.saveChapter(title, chapdir);
+				
+			} else {
+				
+				System.out.println("URL corrupt or mangasite not supported.");
+			}
 		}
 		
 		//MangaFox.download(MangaFox.findUrl("bleach"), new File("H:/Mangas/"));
@@ -443,6 +480,14 @@ public class Main {
 					title = nextArg;
 				}
 				
+			} else if (arg.startsWith("-c") || arg.startsWith("--chapter")) {
+				
+				mode = MODE_DOWNLOAD_CHAPTER;
+				
+				if (nextArg != null && !nextArg.startsWith("-")) {
+					
+					title = nextArg;
+				}
 			}
 			
 		}
@@ -478,15 +523,16 @@ public class Main {
 		System.out.println();
 		System.out.println("============PARAMETERS:============");
 		System.out.println();
-		System.out.println("-s [or --search] search for manga\n");
-		System.out.println("-d [or --download] download or update manga (tile or url)\n");
+		System.out.println("-s [or --search] <title> search for manga\n");
+		System.out.println("-d [or --download] <title or url> download or update manga\n");
+		System.out.println("-c [or --chapter] <url> download a single chapter\n");
 		System.out.println("-u [or --update] update manga-dir\n");
-		System.out.println("-r [or --refresh] refresh metadata (whole dir or specified manga)).\n");
+		System.out.println("-r [or --refresh] <dir or blank> refresh metadata (whole dir or specified manga)).\n");
 		System.out.println("-n [or --noinput] program won't ask for permission to download manga\n");
-		System.out.println("-m [or --metaout] specifies where metadata will be saved. Default is mangadir. Can be called mulitple times.\n");
-		System.out.println("-o [or --output] specifies output dir (where your manga are), needed if no cfg-file exists\n");
+		System.out.println("-m [or --metaout] <dir> specifies where metadata will be saved. Default is mangadir. Can be called mulitple times.\n");
+		System.out.println("-o [or --output] <dir> specifies output dir (where your manga are), needed if no cfg-file exists\n");
 		System.out.println();
-		System.out.println("--dumpsearch <blank> dumps info for mangafox top50 manga into tmp-dir.\n");
+		System.out.println("--dumpsearch <blank> dumps info for mangafox top50 manga into tmp-dir.");
 		System.out.println("--dumpsearch <title> dumps info for search-results into tmp-dir.");
 		System.out.println("--dumpmal <username> dumps plan-to-read list for MAL-user into tmp-dir.");
 		System.out.println();

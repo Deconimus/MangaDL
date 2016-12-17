@@ -672,7 +672,7 @@ public class MangaFox {
 		
 	}
 	
-	private static void saveChapter(String mangaTitle, String chapName, String url, File chapdir) {
+	public static void saveChapter(String mangaTitle, String chapName, String url, File chapdir) {
 		
 		//url = "http://m."+url.substring(url.indexOf("mangafox"));
 		
