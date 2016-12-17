@@ -54,7 +54,7 @@ public class MangaSeeOnline {
 			imgurls.add(imgurl);
 		}
 		
-		System.out.println("Chapter consists of "+imgurls.size()+" pages.");
+		System.out.println("Chapter consists of "+imgurls.size()+" pages.\n");
 		
 		ExecutorService exec = Executors.newCachedThreadPool();
 		
@@ -65,8 +65,6 @@ public class MangaSeeOnline {
 				final int nr = i+1;
 				final String imgUrl = imgurls.get(i);
 				final File chapd = chapdir;
-				
-				System.out.println(nr+" "+imgUrl);
 				
 				try {
 					
