@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -37,6 +38,7 @@ import visionCore.dataStructures.tuples.Quad;
 import visionCore.dataStructures.tuples.Triplet;
 import visionCore.math.FastMath;
 import visionCore.util.Files;
+import visionCore.util.Lists;
 import visionCore.util.StringUtils;
 import visionCore.util.Web;
 
@@ -66,35 +68,38 @@ public class MangaFox {
 		
 		String html = Web.getHTML(searchUrl.replace(replace, searchtitle), false);
 		
-		String table = html.substring(html.indexOf("<table id=\"listing\">")+20);
-		table = table.substring(0, table.indexOf("</table>"));
+		String f = "<div id=\"mangalist\">";
+		String list = html.substring(html.indexOf(f)+f.length());
 		
-		table = table.substring(table.indexOf("</tr>")+5);
-		
-		String[] words = title.split(" ");
+		f = "<ul class=\"list\">";
+		list = list.substring(list.indexOf(f)+f.length(), list.indexOf("</ul>"));
 		
 		List<Result> results = new ArrayList<Result>();
 		
-		for (int i = 0; table.contains("<tr>") && table.contains("</tr>") && i < 1000; i++) {
+		for (int i = 0; i < 10000 && list.contains("<li>") && list.contains("</li>"); i++) {
 			
-			String td = table.substring(table.indexOf("<td>")+4, table.indexOf("</td>"));
+			String entry = list.substring(list.indexOf("<li>")+4);
+			entry = entry.substring(0, entry.indexOf("</li>"));
 			
-			String url = td.substring(td.indexOf("<a href=")+9, td.indexOf(" class=")-1);
-			String name = td.substring(td.indexOf(">")+1, td.indexOf("</a>"));
+			list = list.substring(entry.length());
 			
-			url = url.trim();
-			name = name.trim();
+			f = "<div class=\"manga_text\">";
+			entry = entry.substring(entry.indexOf(f)+f.length());
 			
-			if (StringUtils.containsNum(name.toLowerCase(), Math.max(FastMath.ceilInt((double)words.length / (double)2), 1), (String[])words)) {
-				
-				results.add(new Result(name, url));
-			}
+			f = "href=";
+			entry = entry.substring(entry.indexOf(f)+f.length()+1);
 			
-			table = table.substring(table.indexOf("</tr>")+5);
+			String entryUrl = entry.substring(0, entry.indexOf("rel=")-2);
+			
+			entry = entry.substring(entry.indexOf(">")+1);
+			
+			f = "</a>";
+			String entryTitle = entry.substring(0, entry.indexOf(f));
+			
+			results.add(new Result(entryTitle, entryUrl));
 		}
 		
 		final String t = title;
-		
 		sortResults(results, t);
 		
 		return results.toArray(new Result[results.size()]);
@@ -1203,7 +1208,7 @@ public class MangaFox {
 		
 		Result[] rs = search(search);
 		List<Result> results = new ArrayList<Result>(rs.length);
-		for (Result r : rs) { results.add(r); }
+		Lists.addAll(results, rs);
 		
 		sortResults(results, search);
 		
@@ -1227,7 +1232,6 @@ public class MangaFox {
 			
 			File notdoneP = new File(posterdir.getAbsolutePath()+"/notdone");
 			if (!notdoneP.exists()) { try { notdoneP.createNewFile(); } catch (Exception e) {} }
-			
 		}
 		
 		File timeFile = new File(tmpdir.getAbsolutePath()+"/"+search+"/time");
