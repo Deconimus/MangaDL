@@ -19,20 +19,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
 
-import com.gargoylesoftware.htmlunit.BrowserVersion;
-import com.gargoylesoftware.htmlunit.CookieManager;
-import com.gargoylesoftware.htmlunit.IncorrectnessListener;
-import com.gargoylesoftware.htmlunit.InteractivePage;
-import com.gargoylesoftware.htmlunit.ScriptException;
-import com.gargoylesoftware.htmlunit.ScriptResult;
-import com.gargoylesoftware.htmlunit.WebClient;
-import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import com.gargoylesoftware.htmlunit.html.HtmlSpan;
-import com.gargoylesoftware.htmlunit.javascript.JavaScriptEngine;
-import com.gargoylesoftware.htmlunit.javascript.JavaScriptErrorListener;
-import com.gargoylesoftware.htmlunit.util.Cookie;
-
 import mangaLib.MangaInfo;
 import visionCore.dataStructures.tuples.Quad;
 import visionCore.dataStructures.tuples.Triplet;
@@ -152,81 +138,89 @@ public class MangaFox {
 	
 	private static MangaInfo getMangaInfo(String url, String html, MangaInfo info) {
 		
+		MangaInfo std = new MangaInfo();
+		
 		if (html == null || html.trim().length() < 1) { html = Web.getHTML(url, false); }
 		if (info == null) { info = new MangaInfo(); }
 		
 		info.url = url.trim();
 		
-		info.title = getTitle(html);
+		if (info.title == std.title) { info.title = getTitle(html); }
+		
 		info.status = getStatus(html);
 		
-		String f = "<div id=\"title\"";
-		html = html.substring(html.indexOf(f)+f.length());
+		if (info.synopsis == std.synopsis || info.artist == std.artist || info.author == std.author ||
+			info.genres.isEmpty() || info.released == std.released) {
 		
-		f = "<table>";
-		html = html.substring(html.indexOf(f)+f.length());
-		
-		f = "<tbody>";
-		html = html.substring(html.indexOf(f)+f.length());
-		
-		f = "<a";
-		html = html.substring(html.indexOf(f)+f.length());
-		html = html.substring(html.indexOf(">")+1);
-		
-		String released = html.substring(0, html.indexOf("</a>"));
-		released = released.trim();
-		
-		int year = -1;
-		try { year = Integer.parseInt(released); } catch (Exception | Error e1) {}
-		
-		info.released = year;
-		
-		f = "<a";
-		html = html.substring(html.indexOf(f)+f.length());
-		html = html.substring(html.indexOf(">")+1);
-		
-		String author = html.substring(0, html.indexOf("</a>")).trim();
-		
-		info.author = Web.clean(author.replace("<", "").replace(">", ""));
-		
-		f = "<a";
-		html = html.substring(html.indexOf(f)+f.length());
-		html = html.substring(html.indexOf(">")+1);
-		
-		String artist = html.substring(0, html.indexOf("</a>")).trim();
-		
-		info.artist = Web.clean(artist.replace("<", "").replace(">", ""));
-		
-		f = "<td valign=\"top\">";
-		html = html.substring(html.indexOf(f)+f.length());
-		
-		String genreHtml = html.substring(0, html.indexOf("</td>"));
-		
-		info.genres.clear();
-		
-		for (int i = 0; i < 1000 && genreHtml.contains("<a href") && genreHtml.contains("</a>"); i++) {
+			String f = "<div id=\"title\"";
+			html = html.substring(html.indexOf(f)+f.length());
 			
-			genreHtml = genreHtml.substring(genreHtml.indexOf("<a href"));
-			genreHtml = genreHtml.substring(genreHtml.indexOf(">")+1);
+			f = "<table>";
+			html = html.substring(html.indexOf(f)+f.length());
 			
-			String g = genreHtml.substring(0, genreHtml.indexOf("</a>")).trim();
+			f = "<tbody>";
+			html = html.substring(html.indexOf(f)+f.length());
 			
-			info.genres.add(Web.clean(g));
+			f = "<a";
+			html = html.substring(html.indexOf(f)+f.length());
+			html = html.substring(html.indexOf(">")+1);
 			
-			genreHtml = genreHtml.substring(genreHtml.indexOf("</a>")+4);
+			String released = html.substring(0, html.indexOf("</a>"));
+			released = released.trim();
+			
+			int year = -1;
+			try { year = Integer.parseInt(released); } catch (Exception | Error e1) {}
+			
+			info.released = year;
+			
+			f = "<a";
+			html = html.substring(html.indexOf(f)+f.length());
+			html = html.substring(html.indexOf(">")+1);
+			
+			String author = html.substring(0, html.indexOf("</a>")).trim();
+			
+			info.author = Web.clean(author.replace("<", "").replace(">", ""));
+			
+			f = "<a";
+			html = html.substring(html.indexOf(f)+f.length());
+			html = html.substring(html.indexOf(">")+1);
+			
+			String artist = html.substring(0, html.indexOf("</a>")).trim();
+			
+			info.artist = Web.clean(artist.replace("<", "").replace(">", ""));
+			
+			f = "<td valign=\"top\">";
+			html = html.substring(html.indexOf(f)+f.length());
+			
+			String genreHtml = html.substring(0, html.indexOf("</td>"));
+			
+			info.genres.clear();
+			
+			for (int i = 0; i < 1000 && genreHtml.contains("<a href") && genreHtml.contains("</a>"); i++) {
+				
+				genreHtml = genreHtml.substring(genreHtml.indexOf("<a href"));
+				genreHtml = genreHtml.substring(genreHtml.indexOf(">")+1);
+				
+				String g = genreHtml.substring(0, genreHtml.indexOf("</a>")).trim();
+				
+				info.genres.add(Web.clean(g));
+				
+				genreHtml = genreHtml.substring(genreHtml.indexOf("</a>")+4);
+			}
+			
+			f = "<p class=\"summary less\">";
+			
+			int ind = html.indexOf(f);
+			if (ind == -1) { f = "<p class=\"summary\">"; ind = html.indexOf(f); }
+			
+			html = html.substring(html.indexOf(f)+f.length());
+			
+			String synopsis = html.substring(0, html.indexOf("</p>"));
+			synopsis = MangaInfo.cleanSynopsis(synopsis);
+			
+			info.synopsis = synopsis;
+			
 		}
-		
-		f = "<p class=\"summary less\">";
-		
-		int ind = html.indexOf(f);
-		if (ind == -1) { f = "<p class=\"summary\">"; ind = html.indexOf(f); }
-		
-		html = html.substring(html.indexOf(f)+f.length());
-		
-		String synopsis = html.substring(0, html.indexOf("</p>"));
-		synopsis = MangaInfo.cleanSynopsis(synopsis);
-		
-		info.synopsis = synopsis;
 		
 		return info;
 	}
@@ -234,16 +228,41 @@ public class MangaFox {
 	
 	public static MangaInfo parseInfo(String url, File mangadir) {
 		
-		return parseInfoFromHTML(Web.getHTML(url), url, mangadir);
+		return parseInfoFromHTML(null, Web.getHTML(url), url, mangadir);
 	}
 	
-	private static MangaInfo parseInfoFromHTML(String html, String url, File mangadir) {
+	private static MangaInfo parseInfoFromHTML(MangaInfo info, String html, String url, File mangadir) {
 		
-		String dtitle = getTitle(html);
-		String title = MangaInfo.cleanTitle(dtitle);
+		MangaInfo std = new MangaInfo();
+		
+		String title = (info != null) ? info.title : null;
+		
+		if (title == null || title == std.title) {
+		
+			String dtitle = getTitle(html);
+			title = MangaInfo.cleanTitle(dtitle);
+		}
 		
 		File metadata = new File(Main.metaOuts.get(0)+"/"+title.trim()+"/_metadata");
 		if (!metadata.exists()) { metadata.mkdirs(); }
+		
+		if (info == null) {
+			
+			File infoFile = new File(metadata.getAbsolutePath()+"/info.xml");
+			
+			if (infoFile.exists()) {
+	
+				info = MangaInfo.load(infoFile);
+				if (info == null) { return new MangaInfo(); }
+				
+			} else {
+			
+				info = new MangaInfo();
+			}
+		}
+		
+		if (info.title == std.title) { info.title = title; }
+		else { title = info.title; }
 		
 		File posterdir = new File(metadata.getAbsolutePath().replace("\\", "/")+"/posters");
 		if (!posterdir.exists()) { posterdir.mkdirs(); }
@@ -288,16 +307,17 @@ public class MangaFox {
 		}
 		
 		if (posterdir.listFiles() == null || posterdir.listFiles().length < 3) {
-		
+			
+			final String ti = title;
+			
 			Thread t = new Thread(){
 				@Override
 				public void run() {
 					
-					MAL.downloadPosters(title, title.trim()+"/_metadata/posters", 1);
+					MAL.downloadPosters(ti, ti.trim()+"/_metadata/posters", 1);
 				}
 			};
 			t.start();
-			
 		}
 		
 		File poster = new File(Main.metaOuts.get(0)+"/"+title.trim()+"/_metadata/posters/01.jpg");
@@ -338,25 +358,9 @@ public class MangaFox {
 			
 		}
 		
-		MangaInfo info = null;
-		
-		File infoFile = new File(metadata.getAbsolutePath()+"/info.xml");
-		
-		if (infoFile.exists()) {
-
-			info = MangaInfo.load(infoFile);
-			if (info == null) { return new MangaInfo(); }
-			
-		} else {
-		
-			info = new MangaInfo();
-			
-		}
-		
 		try {
 			
-			info = getMangaInfo(url, html, info);
-			
+			getMangaInfo(url, html, info);
 			saveMangaInfo(info);
 			
 		} catch (Exception | Error e) { e.printStackTrace(); }
@@ -365,43 +369,49 @@ public class MangaFox {
 	}
 	
 	
-	public static void download(String url, File mangadir) {
+	public static void download(MangaInfo info, String url, File mangadir) {
 		
 		String html = null;
-		String title = null;
 		
 		Exception exception = null;
 		
-		for (int i = 0; i < 100 && html == null || getTitle(html) == null; i++) {
+		if (info == null) { info = new MangaInfo(); }
+		MangaInfo std = new MangaInfo();
+		
+		for (int i = 0; i < 100 && html == null || info.title == std.title; i++) {
 			
 			html = Web.getHTML(url);
 			
-			try {
-				
-				title = getTitle(html);
-				
-				if (i > 0) { System.out.print("\n"); }
-				
-			} catch (Exception e) { 
-				
-				exception = e;
-
-				System.out.print(".");
-				
-				try { Thread.sleep(50); } catch (Exception e1) {}
+			if (info.title == null || info.title == std.title || info.title.trim().isEmpty()) {
+			
+				try {
+					
+					info.title = getTitle(html);
+					
+					if (i > 0) { System.out.print("\n"); }
+					
+				} catch (Exception e) { 
+					
+					exception = e;
+					
+					System.out.print(".");
+					
+					try { Thread.sleep(50); } catch (Exception e1) {}
+				}
 			}
 		}
 		
-		if (title == null) {
+		if (info.title == null || info.title == std.title) {
 			
 			exception.printStackTrace();
 			return;
 		}
 		
-		System.out.println("Downloading or updating \""+title+"\"\n");
+		System.out.println("Downloading or updating \""+info.title+"\"\n");
 		
-		MangaInfo mangaInfo = parseInfoFromHTML(html, url, mangadir);
+		info = parseInfoFromHTML(info, html, url, mangadir);
 		
+		/*
 		
 		// Running javascript to get chapters in spite of the adult content warning
 		
@@ -462,7 +472,9 @@ public class MangaFox {
 		
 		Main.setOutStream(true);
 		
-		String f = "<div id=\"chapters";
+		*/
+		
+		String f = "id=\"chapters";
 		html = html.substring(html.indexOf(f)+f.length());
 		
 		f = ">";
@@ -470,7 +482,9 @@ public class MangaFox {
 		
 		List<Triplet<String, String, Double>> chapters = new ArrayList<Triplet<String, String, Double>>();
 		
-		for (int i = 0; i < 10000 && ((html.contains("<h3>") && html.contains("</h3>")) || (html.contains("<h4>") && html.contains("</h4>"))); i++) {
+		for (int i = 0; i < 10000 && html.contains("<li>") && ((html.contains("<h3>") && html.contains("</h3>")) || (html.contains("<h4>") && html.contains("</h4>"))); i++) {
+			
+			html = html.substring(html.indexOf("<li>")+4);
 			
 			boolean h3 = true;
 			
@@ -487,7 +501,7 @@ public class MangaFox {
 			String chapterUrl = html.substring(html.indexOf(f)+f.length()+1, html.indexOf(" title=")-1).trim();
 			
 			String parsenr = html.substring(html.indexOf(">")+1, html.indexOf("</a>")).trim();
-			parsenr = parsenr.substring(title.length()).trim();
+			parsenr = parsenr.substring(parsenr.lastIndexOf(' ')).trim();
 			
 			double chapterNr = -1;
 			
@@ -574,7 +588,7 @@ public class MangaFox {
 				
 			});
 			
-			File dir = getMangasDir(title, mangadir);
+			File dir = getMangasDir(info.title, mangadir);
 			
 			List<File> dirFiles = Files.getFiles(dir, f0 -> f0.isDirectory() && !f0.getName().startsWith("_"));
 			Collections.sort(dirFiles);
@@ -652,10 +666,17 @@ public class MangaFox {
 						
 						try {
 							
-							saveChapter(mangaInfo.title, chapname, chapter.y, chapdir);
+							if (info.chsubs != null && info.chsubs.length() > 5) {
+								
+								saveChapterSubstituted(info.chsubs, chapter.z, info.title, chapname, chapter.y, chapdir);
+								
+							} else {
 							
-							mangaInfo.recentChapterMillis = System.currentTimeMillis();
-							saveMangaInfo(mangaInfo);
+								saveChapter(info.title, chapname, chapter.y, chapdir);
+							}
+							
+							info.recentChapterMillis = System.currentTimeMillis();
+							saveMangaInfo(info);
 							
 						} catch (Exception | Error e) { e.printStackTrace(); }
 						
@@ -665,7 +686,7 @@ public class MangaFox {
 				
 			}
 			
-			if (mangaInfo.status.toLowerCase().trim().equals("completed")) {
+			if (info.status.toLowerCase().trim().equals("completed")) {
 				
 				File dlcomplete = new File(dir.getAbsolutePath()+"/_metadata/DL_COMPLETE");
 				try { dlcomplete.createNewFile(); } catch (Exception e) { }
@@ -674,6 +695,26 @@ public class MangaFox {
 			System.out.println("All done.");
 			
 		} else { System.out.println("No chapters found.."); }
+		
+	}
+	
+	public static void saveChapterSubstituted(String chsubs, double chapnr, String mangaTitle, String chapName, String url, File chapdir) {
+		
+		String chapnrstr = chapnr+"";
+		if (chapnr == (int)chapnr) { chapnrstr = ((int)chapnr)+""; }
+		
+		if (chsubs.contains("mangaseeonline.net")) {
+			
+			chsubs = chsubs.replace("/manga/", "/read-online/");
+			if (chsubs.contains("-page-")) { chsubs = chsubs.substring(0, chsubs.lastIndexOf("-page-"))+".html"; }
+			if (chsubs.contains("-chapter-")) { chsubs = chsubs.substring(0, chsubs.lastIndexOf("-chapter-"))+".html"; }
+			
+			MangaSeeOnline.saveChapter(chsubs+"-chapter-"+chapnrstr, chapdir);
+			
+		} else {
+			
+			saveChapter(mangaTitle, chapName, url, chapdir);
+		}
 		
 	}
 	
@@ -689,6 +730,8 @@ public class MangaFox {
 		for (int i = 0; i < 100 && (chlength == -1); i++) {
 			
 			html = Web.getDecodedHTML(url, false);
+			if (html == null) { continue; }
+			
 			chlength = getChapterLength(html, false);
 		}
 		
@@ -787,15 +830,13 @@ public class MangaFox {
 						
 						try {
 							
-							BufferedImage img = Web.getImage(imgurl);
+							Web.downloadFile(imgurl, out);
 							
-							if (img != null && (img.getWidth() <= 1 || img.getHeight() <= 1)) { break; }
+							if (out.exists()) {
 							
-							ImageIO.write(img, "jpg", out);
-							
-							System.out.println("Saved "+out.getName());
-							
-							break;
+								System.out.println("Saved "+out.getName());
+								break;
+							}
 							
 						} catch (Exception e1) { e = e1; }
 						
@@ -936,7 +977,7 @@ public class MangaFox {
 	private static boolean checkChapterComplete(File chapdir, String url, boolean lastChapter) {
 		
 		String html = Web.getDecodedHTML(url, false);
-		int chlength = getChapterLength(html);
+		int chlength = getChapterLength(html, false);
 		
 		if (lastChapter) { chlength -= 1; }
 		

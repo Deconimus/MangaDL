@@ -20,6 +20,7 @@ import org.dom4j.io.SAXReader;
 import org.dom4j.io.XMLWriter;
 
 import mangaLib.MAL.MALEntry;
+import mangaLib.MangaInfo;
 import visionCore.io.MultiPrintStream;
 import visionCore.util.Files;
 
@@ -125,15 +126,15 @@ public class Main {
 			
 			System.out.println();
 			
-			MangaFox.download(results[nr].url, mangadir);
+			MangaFox.download(null, results[nr].url, mangadir);
 			
 		} else if (mode == MODE_DOWNLOAD) {
 			
 			Result result = null;
 			
-			result = searchInFolder(title);
+			MangaInfo info = searchInFolder(title);
 			
-			if (result == null) {
+			if (info == null) {
 			
 				Result[] results = MangaFox.search(title);
 				
@@ -159,11 +160,13 @@ public class Main {
 				
 			}
 			
-			download(result.url, mangadir);
+			String url = (info != null) ? info.url : result.url;
+			
+			download(info, url, mangadir);
 			
 		} else if (mode == MODE_URL_DOWNLOAD) {
 			
-			download(title, mangadir);
+			download(null, title, mangadir);
 			
 		} else if (mode == MODE_UPDATE) {
 			
@@ -239,9 +242,9 @@ public class Main {
 		
 	}
 	
-	private static void download(String url, File mangadir) {
+	private static void download(MangaInfo info, String url, File mangadir) {
 		
-		MangaFox.download(url, mangadir);
+		MangaFox.download(info, url, mangadir);
 	}
 	
 	private static void updateMangaDir(File mangadir) {
@@ -256,16 +259,16 @@ public class Main {
 			File metadir = new File(f.getAbsolutePath()+"/_metadata");
 			if (!metadir.exists()) { continue; }
 			
-			File info = new File(metadir.getAbsolutePath().replace("\\", "/")+"/info.xml");
-			if (!info.exists()) { continue; }
+			File infoF = new File(metadir.getAbsolutePath().replace("\\", "/")+"/info.xml");
+			if (!infoF.exists()) { continue; }
 			
 			File dlCompleteFlag = new File(metadir.getAbsolutePath()+"/DL_COMPLETE");
 			if (dlCompleteFlag.exists()) { System.out.println("Skipping \""+f.getName()+"\"\n"); continue; }
 			
-			Result result = getResultFromInfo(info);
-			if (result == null || result.url == null || result.url.trim().length() < 5) { continue; }
+			MangaInfo info = MangaInfo.load(infoF, true);
+			if (info == null || info.url == null || info.url.trim().length() < 5) { continue; }
 			
-			download(result.url, mangadir);
+			download(info, info.url, mangadir);
 			System.out.println();
 			
 		}
@@ -651,7 +654,7 @@ public class Main {
 	}
 	
 	
-	private static Result searchInFolder(String title) {
+	private static MangaInfo searchInFolder(String title) {
 		
 		List<File> files = Files.getFiles(new File(mangapath), f -> f.isDirectory() && !f.getName().startsWith("_") && f.getName().trim().equalsIgnoreCase(title.trim()));
 		if (files.isEmpty()) { return null; }
@@ -666,7 +669,7 @@ public class Main {
 		File info = new File(dir.getAbsolutePath().replace("\\", "/")+"/info.xml");
 		if (!info.exists()) { return null; }
 		
-		return getResultFromInfo(info);
+		return MangaInfo.load(info, true);
 	}
 	
 	private static Result getResultFromInfo(File info) {

@@ -16,6 +16,8 @@ public class MangaSeeOnline {
 
 	public static void saveChapter(String url, File chapdir) {
 		
+		System.out.println("URL: \""+url+"\"");
+		
 		if (!chapdir.exists()) { chapdir.mkdirs(); }
 		
 		File lock = new File(chapdir.getAbsolutePath().replace("\\", "/")+"/lock");
@@ -105,9 +107,7 @@ public class MangaSeeOnline {
 		
 			try {
 			
-				BufferedImage img = Web.getImage(url);
-				
-				ImageIO.write(img, "jpg", out);
+				Web.downloadFile(url, out);
 				
 				System.out.println("Saved "+out.getName());
 				

@@ -178,7 +178,7 @@ public class MAL extends mangaLib.MAL {
 								
 								if (!pfile.exists()) {
 									
-									Poster.saveResized(img, pfile);
+									Poster.saveResized(img, pfile, Poster.MAL_WIDTH, Poster.MAL_HEIGHT);
 								}
 								
 								File notdoneP = new File(outdir.getAbsolutePath()+"/"+entry.title+"/_metadata/posters/notdone");
@@ -344,7 +344,7 @@ public class MAL extends mangaLib.MAL {
 									
 									if (img != null && (img.getWidth() <= 1 || img.getHeight() <= 1)) { continue; }
 									
-									Poster.saveResized(img, out);
+									Poster.saveResized(img, out, Poster.MAL_WIDTH, Poster.MAL_HEIGHT);
 								}
 								
 								break;
