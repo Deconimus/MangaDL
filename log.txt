@@ -1,26 +1,35 @@
 
 Necessary arguments are missing.
 Instead of promting you to use the -h argument, I'll just do that for you:
+  __  __                         _____  _      
+ |  \/  |                       |  __ \| |     
+ | \  / | __ _ _ __   __ _  __ _| |  | | |     
+ | |\/| |/ _` | '_ \ / _` |/ _` | |  | | |     
+ | |  | | (_| | | | | (_| | (_| | |__| | |____ 
+ |_|  |_|\__,_|_| |_|\__, |\__,_|_____/|______|
+                      __/ |                    
+                     |___/                     
 
 ============PARAMETERS:============
 
--s [or --search] search for manga
+-s [or --search] <title> search for manga
 
--d [or --download] download or update manga (tile or url)
+-d [or --download] <title or url> download or update manga
+
+-c [or --chapter] <url> download a single chapter
 
 -u [or --update] update manga-dir
 
--r [or --refresh] refresh metadata (whole dir or specified manga)).
+-r [or --refresh] <dir or blank> refresh metadata (whole dir or specified manga)).
 
 -n [or --noinput] program won't ask for permission to download manga
 
--m [or --metaout] specifies where metadata will be saved. Default is mangadir. Can be called mulitple times.
+-m [or --metaout] <dir> specifies where metadata will be saved. Default is mangadir. Can be called mulitple times.
 
--o [or --output] specifies output dir (where your manga are), needed if no cfg-file exists
+-o [or --output] <dir> specifies output dir (where your manga are), needed if no cfg-file exists
 
 
 --dumpsearch <blank> dumps info for mangafox top50 manga into tmp-dir.
-
 --dumpsearch <title> dumps info for search-results into tmp-dir.
 --dumpmal <username> dumps plan-to-read list for MAL-user into tmp-dir.
 

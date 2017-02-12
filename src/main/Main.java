@@ -314,8 +314,6 @@ public class Main {
 		
 		if (info.url == null || info.url.trim().length() < 5) { return; }
 		
-		mangaLib.MangaInfo ninfo = MangaFox.getMangaInfo(info.url, info);
-		
 		System.out.println("Refreshing \""+info.title+"\"s metadata.");
 		
 		for (String metaout : metaOuts) {
