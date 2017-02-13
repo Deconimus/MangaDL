@@ -30,7 +30,7 @@ public class Main {
 							MODE_DUMP_SEARCH = 5, MODE_DUMP_MAL = 6, MODE_DOWNLOAD_CHAPTER = 7;
 	
 	public static String title, mangapath;
-	public static boolean noUserInput = false;
+	public static boolean noUserInput = false, chsubs = true;
 	public static int mode = -1;
 	
 	public static List<String> metaOuts;
@@ -126,7 +126,7 @@ public class Main {
 			
 			System.out.println();
 			
-			MangaFox.download(null, results[nr].url, mangadir);
+			MangaFox.download(null, results[nr].url, mangadir, chsubs);
 			
 		} else if (mode == MODE_DOWNLOAD) {
 			
@@ -153,11 +153,9 @@ public class Main {
 					if (!in.contains("y")) { return; }
 					
 					System.out.println();
-					
 				}
 				
 				result = results[0];
-				
 			}
 			
 			String url = (info != null) ? info.url : result.url;
@@ -244,7 +242,7 @@ public class Main {
 	
 	private static void download(MangaInfo info, String url, File mangadir) {
 		
-		MangaFox.download(info, url, mangadir);
+		MangaFox.download(info, url, mangadir, chsubs);
 	}
 	
 	private static void updateMangaDir(File mangadir) {
@@ -489,6 +487,10 @@ public class Main {
 					
 					title = nextArg;
 				}
+				
+			} else if (arg.startsWith("--nochsubs")) {
+				
+				chsubs = false;
 			}
 			
 		}

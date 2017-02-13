@@ -110,9 +110,7 @@ public class MAL extends mangaLib.MAL {
 					Files.cleanseDir(f);
 					f.delete();
 				}
-				
 			}
-			
 		}
 		
 		System.out.println("Dumping metadata for "+username+"'s manga-list.\n");
@@ -241,6 +239,28 @@ public class MAL extends mangaLib.MAL {
 		
 	}
 	
+	
+	public static void downloadPosters(int id, String relPosterDir, int namingOffset) {
+		
+		String url = "https://myanimelist.net/manga/"+id;
+		String html = Web.getHTML(url, false);
+		
+		for (int i = 0; i < 100 && (html == null || html.length() < 100); i++) {
+			
+			html = Web.getHTML(url, false);
+		}
+		if (html == null) { return; }
+		
+		html = html.substring(0, html.indexOf("/pics\">"));
+		
+		String f = "href=";
+		html = html.substring(html.lastIndexOf(f)+f.length()+1);
+		
+		String mangaUrl = Web.clean(html);
+		
+		downloadPostersByUrl(mangaUrl, relPosterDir, namingOffset);
+	}
+	
 	public static void downloadPosters(String title, String relPosterDir, int namingOffset) {
 		
 		String url = MANGA_SEARCH_URL + title.toLowerCase().trim().replace(" ", SPACE_REPLACE);
@@ -254,7 +274,14 @@ public class MAL extends mangaLib.MAL {
 		
 		String mangaUrl = getMangaUrlFromSearch(html);
 		
-		html = Web.getHTML(mangaUrl+"/pics", false);
+		downloadPostersByUrl(mangaUrl, relPosterDir, namingOffset);
+	}
+	
+	public static void downloadPostersByUrl(String malUrl, String relPosterDir, int namingOffset) {
+		
+		if (malUrl.endsWith("/")) { malUrl = malUrl.substring(0, malUrl.length()-1); }
+		
+		String html = Web.getHTML(malUrl+"/pics", false);
 		
 		String f = "<div class=\"wrapper\">";
 		html = html.substring(html.indexOf(f)+f.length());
@@ -364,11 +391,9 @@ public class MAL extends mangaLib.MAL {
 		} finally {
 			
 			exec.shutdown();
-			
 		}
 		
-		try { exec.awaitTermination(30, TimeUnit.MINUTES); } catch (Exception | Error e) { e.printStackTrace(); }
-		
+		try { exec.awaitTermination(5, TimeUnit.MINUTES); } catch (Exception | Error e) { e.printStackTrace(); }
 	}
 	
 }

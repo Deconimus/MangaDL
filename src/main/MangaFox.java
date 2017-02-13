@@ -29,6 +29,7 @@ import visionCore.util.StringUtils;
 import visionCore.util.Web;
 
 import mangaLib.Poster;
+import mangaLib.scrapers.Scraper;
 
 public class MangaFox {
 	
@@ -309,12 +310,20 @@ public class MangaFox {
 		if (posterdir.listFiles() == null || posterdir.listFiles().length < 3) {
 			
 			final String ti = title;
+			final int mal_id = info.mal_id;
 			
 			Thread t = new Thread(){
 				@Override
 				public void run() {
 					
-					MAL.downloadPosters(ti, ti.trim()+"/_metadata/posters", 1);
+					if (mal_id < 0) {
+						
+						MAL.downloadPosters(ti, ti.trim()+"/_metadata/posters", 1);
+						
+					} else {
+						
+						MAL.downloadPosters(mal_id, ti.trim()+"/_metadata/posters", 1);
+					}
 				}
 			};
 			t.start();
@@ -369,11 +378,13 @@ public class MangaFox {
 	}
 	
 	
-	public static void download(MangaInfo info, String url, File mangadir) {
+	public static void download(MangaInfo info, String url, File mangadir, boolean chsubs) {
 		
 		String html = null;
 		
 		Exception exception = null;
+		
+		boolean downloadingAnew = info == null;
 		
 		if (info == null) { info = new MangaInfo(); }
 		MangaInfo std = new MangaInfo();
@@ -405,6 +416,14 @@ public class MangaFox {
 			
 			exception.printStackTrace();
 			return;
+		}
+		
+		if (downloadingAnew && chsubs && !info.title.equalsIgnoreCase("onepunch-man") && !info.title.equalsIgnoreCase("the gamer")) {
+			
+			Scraper scraper = new mangaLib.scrapers.MangaSeeOnline();
+			List<MangaInfo> results = scraper.search(info.title);
+			
+			if (results.size() == 1) { info.chsubs = results.get(0).url; }
 		}
 		
 		System.out.println("Downloading or updating \""+info.title+"\"\n");
