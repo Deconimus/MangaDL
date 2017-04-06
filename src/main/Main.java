@@ -21,8 +21,11 @@ import org.dom4j.io.XMLWriter;
 
 import mangaLib.MAL.MALEntry;
 import mangaLib.MangaInfo;
+import mangaLib.scrapers.MangaFox;
+import mangaLib.scrapers.Scraper;
 import visionCore.io.MultiPrintStream;
 import visionCore.util.Files;
+import visionCore.util.Web;
 
 public class Main {
 
@@ -30,9 +33,10 @@ public class Main {
 							MODE_DUMP_SEARCH = 5, MODE_DUMP_MAL = 6, MODE_DOWNLOAD_CHAPTER = 7;
 	
 	public static String title, mangapath;
-	public static boolean noUserInput = false, chsubs = true;
+	public static boolean noUserInput = false;
 	public static int mode = -1;
 	
+	/** also contains mangapath! */
 	public static List<String> metaOuts;
 	
 	public static String abspath;
@@ -74,11 +78,13 @@ public class Main {
 		
 		System.out.println();
 		
+		Scraper scraper = new MangaFox();
+		
 		if (mode == MODE_SEARCH) {
 			
-			Result[] results = MangaFox.search(title);
+			List<MangaInfo> results = scraper.searchManga(title);
 			
-			if (results == null || results.length == 0) {
+			if (results == null || results.isEmpty()) {
 				
 				System.out.println("No manga named+\""+title+"\" found.");
 				return;
@@ -86,11 +92,10 @@ public class Main {
 			
 			System.out.println("Which manga would you like to download?\n");
 			
-			for (int i = 0; i < results.length; i++) {
-				Result r = results[i];
+			for (int i = 0; i < results.size(); i++) {
+				MangaInfo r = results.get(i);
 				
 				System.out.println("["+i+"] "+r.title);
-				
 			}
 			
 			System.out.println();
@@ -115,30 +120,29 @@ public class Main {
 					
 				} catch (Exception e) {}
 				
-				if (nr >= 0 && nr < results.length) {
+				if (nr >= 0 && nr < results.size()) {
 					
 					break;
 				}
 				
 				System.out.println("Please enter a valid input.");
-				
 			}
 			
 			System.out.println();
 			
-			MangaFox.download(null, results[nr].url, mangadir, chsubs);
+			Downloader.download(null, results.get(nr).url);
 			
 		} else if (mode == MODE_DOWNLOAD) {
 			
-			Result result = null;
+			MangaInfo result = null;
 			
 			MangaInfo info = searchInFolder(title);
 			
 			if (info == null) {
 			
-				Result[] results = MangaFox.search(title);
+				List<MangaInfo> results = scraper.searchManga(title);
 				
-				if (results == null || results.length == 0) {
+				if (results == null || results.isEmpty()) {
 					
 					System.out.println("No manga named+\""+title+"\" found.");
 					return;
@@ -146,7 +150,7 @@ public class Main {
 				
 				if (!noUserInput) {
 				
-					System.out.println("Download \""+results[0].title+"\" ? [Y/n]");
+					System.out.println("Download \""+results.get(0).title+"\" ? [Y/n]");
 					
 					String in = System.console().readLine().trim().toLowerCase();
 					
@@ -155,20 +159,20 @@ public class Main {
 					System.out.println();
 				}
 				
-				result = results[0];
+				result = results.get(0);
 			}
 			
 			String url = (info != null) ? info.url : result.url;
 			
-			download(info, url, mangadir);
+			download(info, url);
 			
 		} else if (mode == MODE_URL_DOWNLOAD) {
 			
-			download(null, title, mangadir);
+			download(null, title);
 			
 		} else if (mode == MODE_UPDATE) {
 			
-			updateMangaDir(mangadir);
+			updateMangaDir(mangadir, new File(metaOuts.get(0)));
 			
 		} else if (mode == MODE_REFRESH) {
 			
@@ -190,7 +194,6 @@ public class Main {
 			} else {
 				
 				dumpSearch(title);
-				
 			}
 			
 		} else if (mode == MODE_DUMP_MAL) {
@@ -213,7 +216,7 @@ public class Main {
 				if (chapdir.exists()) { Files.cleanseDir(chapdir); chapdir.delete(); }
 				chapdir.mkdirs();
 				
-				MangaFox.saveChapter("", "", title, chapdir);
+				mangadl.deprecated.MangaFox.saveChapter("", "", title, chapdir);
 				
 			} else if (title.contains("mangaseeonline.net")) {
 				
@@ -240,16 +243,16 @@ public class Main {
 		
 	}
 	
-	private static void download(MangaInfo info, String url, File mangadir) {
+	private static void download(MangaInfo info, String url) {
 		
-		MangaFox.download(info, url, mangadir, chsubs);
+		Downloader.download(info, url);
 	}
 	
-	private static void updateMangaDir(File mangadir) {
+	private static void updateMangaDir(File mangadir, File meta) {
 		
 		System.out.println("Updating whole mangadir... hold up\n");
 		
-		List<File> files = Files.getFiles(new File(mangapath), f -> f.isDirectory() && !f.getName().startsWith("_"));
+		List<File> files = Files.getFiles(mangadir, f -> f.isDirectory() && !f.getName().startsWith("_"));
 		if (files.isEmpty()) { return; }
 		
 		for (File f : files) {
@@ -257,7 +260,7 @@ public class Main {
 			File metadir = new File(f.getAbsolutePath()+"/_metadata");
 			if (!metadir.exists()) { continue; }
 			
-			File infoF = new File(metadir.getAbsolutePath().replace("\\", "/")+"/info.xml");
+			File infoF = new File(meta.getAbsolutePath().replace('\\', '/')+"/"+f.getName()+"/_metadata/info.xml");
 			if (!infoF.exists()) { continue; }
 			
 			File dlCompleteFlag = new File(metadir.getAbsolutePath()+"/DL_COMPLETE");
@@ -266,9 +269,8 @@ public class Main {
 			MangaInfo info = MangaInfo.load(infoF, true);
 			if (info == null || info.url == null || info.url.trim().length() < 5) { continue; }
 			
-			download(info, info.url, mangadir);
+			download(info, info.url);
 			System.out.println();
-			
 		}
 		
 	}
@@ -291,7 +293,7 @@ public class Main {
 		List<File> files = Files.getFiles(new File(mangapath), f -> f.isDirectory() && !f.getName().startsWith("_"));
 		if (files.isEmpty()) { return; }
 		
-		MangaFox.sortResults(files, title);
+		mangadl.deprecated.MangaFox.sortResults(files, title);
 		
 		File dir = files.get(0);
 		
@@ -299,7 +301,6 @@ public class Main {
 		if (!dir.exists()) { System.out.println("Couldn't find \""+title+"\""); return; }
 		
 		refreshManga(mangadir, dir);
-		
 	}
 	
 	private static void refreshManga(File mangadir, File dir) {
@@ -314,42 +315,19 @@ public class Main {
 		
 		System.out.println("Refreshing \""+info.title+"\"s metadata.");
 		
-		for (String metaout : metaOuts) {
-			
-			File mangaPosters = new File(metaout+"/"+info.title.trim()+"/_metadata/posters");
-			
-			if (mangaPosters.exists()) {
-			
-				for (File f : mangaPosters.listFiles()) {
-					if (!f.isFile() || !ImageFormats.isSupported(f)) { continue; }
-					
-					String name = f.getName().substring(f.getName().lastIndexOf("."));
-					
-					if (name.length() == 2 && Character.isDigit(name.charAt(0))) {
-						
-						f.delete();
-					}
-					
-				}
-				
-			}
-			
-		}
-		
-		MangaFox.parseInfo(info.url, mangadir);
-		
+		String html = Web.tryGetHTML(info.url, 10, 60 * 1000, false);
+		info = Scraper.getScraper(info.url).getInfo(info.url, html, info);
+		Downloader.downloadPosters(info, info.url, html);
 	}
 	
 	private static void dumpHot() {
 		
-		MangaFox.dumpHot(new File(Main.abspath+"/tmp/hot"));
-		
+		mangadl.deprecated.MangaFox.dumpHot(new File(Main.abspath+"/tmp/hot"));
 	}
 	
 	private static void dumpSearch(String title) {
 		
-		MangaFox.dumpSearch(title, new File(Main.abspath+"/tmp/"));
-		
+		mangadl.deprecated.MangaFox.dumpSearch(title, new File(Main.abspath+"/tmp/"));
 	}
 	
 	private static void dumpMAL(String username) {
@@ -373,7 +351,6 @@ public class Main {
 			} else if (entry.status == MAL.STATUS_DROPPED) {
 				
 				dropped.add(entry);
-				
 			}
 			
 		}
@@ -415,14 +392,13 @@ public class Main {
 				
 				if (nextArg != null && !nextArg.startsWith("-")) {
 					
-					if (nextArg.startsWith("http") || nextArg.startsWith("www") || nextArg.startsWith("mangafox.me")) {
+					if (nextArg.startsWith("www") || nextArg.contains("http://") || nextArg.contains("https://")) {
 						
 						mode = MODE_URL_DOWNLOAD;
 						
 					} else { mode = MODE_DOWNLOAD; }
 					
 					title = nextArg;
-					
 				}
 				
 			} else if (arg.startsWith("-u") || arg.startsWith("--update")) {
@@ -488,9 +464,6 @@ public class Main {
 					title = nextArg;
 				}
 				
-			} else if (arg.startsWith("--nochsubs")) {
-				
-				chsubs = false;
 			}
 			
 		}
@@ -656,10 +629,10 @@ public class Main {
 	
 	private static MangaInfo searchInFolder(String title) {
 		
-		List<File> files = Files.getFiles(new File(mangapath), f -> f.isDirectory() && !f.getName().startsWith("_") && f.getName().trim().equalsIgnoreCase(title.trim()));
+		List<File> files = Files.getFiles(new File(metaOuts.get(0)), f -> f.isDirectory() && !f.getName().startsWith("_") && f.getName().trim().equalsIgnoreCase(title.trim()));
 		if (files.isEmpty()) { return null; }
 		
-		MangaFox.sortResults(files, title);
+		mangaLib.scrapers.MangaFox.sortResults(files, title);
 		
 		File dir = files.get(0);
 		
@@ -671,25 +644,5 @@ public class Main {
 		
 		return MangaInfo.load(info, true);
 	}
-	
-	private static Result getResultFromInfo(File info) {
-		
-		Files.waitOnFile(info, 4);
-		
-		SAXReader reader = new SAXReader();
-		Document doc = null;
-		try { doc = reader.read(info); }
-		catch (DocumentException e) { System.out.println("Failed at reading \""+info.getAbsolutePath().replace("\\", "/")+"\""); return null; }
-		
-		Element root = doc.getRootElement();
-		
-		String url = null;
-		String t = null;
-		try { url = root.element("url").getText().trim(); } catch (Exception e) { return null; }
-		try { t = root.element("title").getText().trim(); } catch (Exception e) { return null; }
-		
-		return new Result(t, url);
-	}
-	
 	
 }

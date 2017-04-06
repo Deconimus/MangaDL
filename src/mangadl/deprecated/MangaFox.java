@@ -1,4 +1,4 @@
-package main;
+package mangadl.deprecated;
 
 import java.awt.Image;
 import java.awt.image.BufferedImage;
@@ -31,19 +31,12 @@ import visionCore.util.Web;
 import mangaLib.Poster;
 import mangaLib.scrapers.Scraper;
 
+import main.Main;
+import main.MAL;
+
+
 public class MangaFox {
 	
-	public static String findUrl(String title) {
-		
-		Result[] rs = search(title);
-		
-		if (rs != null && rs.length > 0) {
-			
-			return rs[0].url;
-		}
-		
-		return null;
-	}
 	
 	public static Result[] search(String title) {
 		
@@ -144,13 +137,16 @@ public class MangaFox {
 		if (html == null || html.trim().length() < 1) { html = Web.getHTML(url, false); }
 		if (info == null) { info = new MangaInfo(); }
 		
-		info.url = url.trim();
+		if (info.url.equals(std.url)) {
+			
+			info.url = url.trim();
+		}
 		
-		if (info.title == std.title) { info.title = getTitle(html); }
+		if (info.title.equals(std.title)) { info.title = getTitle(html); }
 		
 		info.status = getStatus(html);
 		
-		if (info.synopsis == std.synopsis || info.artist == std.artist || info.author == std.author ||
+		if (info.synopsis.equals(std.synopsis) || info.artist.equals(std.artist) || info.author.equals(std.author) ||
 			info.genres.isEmpty() || info.released == std.released) {
 		
 			String f = "<div id=\"title\"";
@@ -220,7 +216,6 @@ public class MangaFox {
 			synopsis = MangaInfo.cleanSynopsis(synopsis);
 			
 			info.synopsis = synopsis;
-			
 		}
 		
 		return info;
@@ -341,7 +336,7 @@ public class MangaFox {
 				if (!o.getParentFile().exists()) { o.getParentFile().mkdirs(); }
 				
 				Files.waitOnFile(o, 2);
-				Files.copyFileUsingOS(poster, o);
+				try { Files.copyFileUsingOS(poster, o); } catch (Exception e) {}
 			}
 			
 		} else {
@@ -421,7 +416,7 @@ public class MangaFox {
 		if (downloadingAnew && chsubs && !info.title.equalsIgnoreCase("onepunch-man") && !info.title.equalsIgnoreCase("the gamer")) {
 			
 			Scraper scraper = new mangaLib.scrapers.MangaSeeOnline();
-			List<MangaInfo> results = scraper.search(info.title);
+			List<MangaInfo> results = scraper.searchManga(info.title);
 			
 			if (results.size() == 1) { info.chsubs = results.get(0).url; }
 		}
@@ -430,161 +425,17 @@ public class MangaFox {
 		
 		info = parseInfoFromHTML(info, html, url, mangadir);
 		
-		/*
-		
-		// Running javascript to get chapters in spite of the adult content warning
-		
-		if (html.contains("<div class=\"warning\"")) {
-			
-			System.out.println("Starting a WebClient to run javascript code to surpass adult-content warnings.");
-			System.out.println("Just ignore the following warning(s)..\n");
-		
-			WebClient client = new WebClient(BrowserVersion.CHROME);
-			
-			client.getOptions().setThrowExceptionOnScriptError(false);
-			client.getOptions().setCssEnabled(false);
-			client.getOptions().setThrowExceptionOnFailingStatusCode(false);
-			
-			client.getCookieManager().setCookiesEnabled(false);
-			
-			client.setCookieManager(new CookieManager(){
-				@Override public void addCookie(Cookie cookie) { }
-			});
-			
-			client.setJavaScriptEngine(new JavaScriptEngine(client){
-				@Override protected void handleJavaScriptException(ScriptException arg0, boolean arg1) {}
-			});
-			
-			client.setIncorrectnessListener(new IncorrectnessListener(){
-				@Override public void notify(String arg0, Object arg1) { }
-			});
-			client.setJavaScriptErrorListener(new JavaScriptErrorListener() {
-				@Override public void loadScriptError(InteractivePage arg0, URL arg1, Exception arg2) { }
-				@Override public void malformedScriptURL(InteractivePage arg0, String arg1, MalformedURLException arg2) { }
-				@Override public void scriptException(InteractivePage arg0, ScriptException arg1) { }
-				@Override public void timeoutError(InteractivePage arg0, long arg1, long arg2) { }
-		    });
-			
-			try {
-				HtmlPage page = client.getPage(url);
-				
-				System.out.print("\r\n");
-				
-				//HtmlDivision warning = (HtmlDivision) page.getByXPath("//div[@class='warning']").get(0);
-				
-				HtmlSpan warningExtra = (HtmlSpan) page.getHtmlElementById("warning_extra");
-				HtmlAnchor warningClick = (HtmlAnchor) warningExtra.getHtmlElementDescendants().iterator().next();
-				
-				String javaScript = warningClick.getAttribute("onClick");
-				
-				ScriptResult result = page.executeJavaScript(javaScript);
-				
-				if (!result.getNewPage().isHtmlPage()) { System.out.println("Result wasn't html.."); return; }
-				
-				page = (HtmlPage) result.getNewPage();
-				
-				html = page.asXml();
-				
-			} catch (Exception e) { e.printStackTrace(); }
-			
-		}
-		
-		Main.setOutStream(true);
-		
-		*/
-		
-		String f = "id=\"chapters";
-		html = html.substring(html.indexOf(f)+f.length());
-		
-		f = ">";
-		html = html.substring(html.indexOf(f)+f.length());
-		
-		List<Triplet<String, String, Double>> chapters = new ArrayList<Triplet<String, String, Double>>();
-		
-		for (int i = 0; i < 10000 && html.contains("<li>") && ((html.contains("<h3>") && html.contains("</h3>")) || (html.contains("<h4>") && html.contains("</h4>"))); i++) {
-			
-			html = html.substring(html.indexOf("<li>")+4);
-			
-			boolean h3 = true;
-			
-			int ind = html.indexOf("<h3>");
-			if (ind == -1 || (html.indexOf("<h4>") != -1 && ind > html.indexOf("<h4>"))) {
-				
-				h3 = false;
-			}
-			
-			f = h3 ? "<h3>" : "<h4>";
-			html = html.substring(html.indexOf(f)+f.length());
-			
-			f = "<a href=";
-			String chapterUrl = html.substring(html.indexOf(f)+f.length()+1, html.indexOf(" title=")-1).trim();
-			
-			String parsenr = html.substring(html.indexOf(">")+1, html.indexOf("</a>")).trim();
-			parsenr = parsenr.substring(parsenr.lastIndexOf(' ')).trim();
-			
-			double chapterNr = -1;
-			
-			try {
-				
-				chapterNr = Double.parseDouble(parsenr);
-				
-			} catch (Exception | Error e) { try { chapterNr = Integer.parseInt(parsenr); } catch (Exception | Error e1) {} }
-			
-			html = html.substring(html.indexOf("</a>")+4);
-			
-			String chapterTitle = "";
-			
-			f = h3 ? "</h3>" : "</h4>";
-			int nindx = html.indexOf(f);
-			
-			if (nindx != -1 && nindx > html.indexOf("<span") && html.indexOf("<span") != -1) {
-				
-				chapterTitle = html.substring(html.indexOf(">")+1, html.indexOf("</span>"));
-				chapterTitle = chapterTitle.replace("\\", "-");
-				chapterTitle = chapterTitle.replace("/", "-");
-				chapterTitle = chapterTitle.replace("\"", "");
-				chapterTitle = chapterTitle.replace("'", "");
-				chapterTitle = chapterTitle.replace("*", "");
-				chapterTitle = chapterTitle.replace("?", "");
-				chapterTitle = chapterTitle.replace("<", "[");
-				chapterTitle = chapterTitle.replace(">", "]");
-				chapterTitle = chapterTitle.replace("|", "-");
-				chapterTitle = chapterTitle.replace(":", " -");
-				chapterTitle = chapterTitle.replace("�", "ss");
-				chapterTitle = chapterTitle.replace(".....", "");
-				chapterTitle = chapterTitle.replace("....", "");
-				chapterTitle = chapterTitle.replace("...", "");
-				chapterTitle = chapterTitle.replace("..", "");
-				chapterTitle = Web.clean(chapterTitle).trim();
-				chapterTitle = chapterTitle.replaceAll("[^ -~]", "");
-				
-				while (chapterTitle.endsWith(".")) { chapterTitle = chapterTitle.substring(0, chapterTitle.length()-1); }
-				
-			}
-			
-			if (chapterNr > 0) { // not saving pilots
-			
-				if (chapterNr != -1) {
-					
-					chapters.add(new Triplet<String, String, Double>(chapterTitle, chapterUrl, chapterNr));
-					
-				} else { System.out.println("Invalid chapter nr \""+parsenr+"\""); }
-				
-			}
-			
-			f = h3 ? "</h3>" : "</h4>";
-			html = html.substring(html.indexOf(f)+f.length());
-		}
+		List<Triplet<String, Double, String>> chapters = new mangaLib.scrapers.MangaFox().getChapters(html);
 		
 		if (!chapters.isEmpty()) {
 			
 			for (int i = chapters.size()-1, n = 1, r = 0, ind = -1; i >= 0; i--) {
 				
-				if (ind == -1 && chapters.get(i).z == 1.0) {
+				if (ind == -1 && chapters.get(i).y == 1.0) {
 					
 					ind = i;
 					
-				} else if (ind != -1 && i < ind && chapters.get(i).z == 1.0) {
+				} else if (ind != -1 && i < ind && chapters.get(i).y == 1.0) {
 					
 					r = 1;
 				}
@@ -593,19 +444,11 @@ public class MangaFox {
 					
 					n++;
 					
-				} else { chapters.get(i).z += n; }
+				} else { chapters.get(i).y += n; }
 				
 			}
 			
-			Collections.sort(chapters, new Comparator<Triplet<String, String, Double>>(){
-
-				@Override
-				public int compare(Triplet<String, String, Double> arg0, Triplet<String, String, Double> arg1) {
-					
-					return Double.compare(arg0.z, arg1.z);
-				}
-				
-			});
+			Collections.sort(chapters, (ch0, ch1) -> Double.compare(ch0.y, ch1.y));
 			
 			File dir = getMangasDir(info.title, mangadir);
 			
@@ -613,7 +456,7 @@ public class MangaFox {
 			Collections.sort(dirFiles);
 			
 			for (int j = 0, lastChapInd = 0; j < chapters.size(); j++) {
-				Triplet<String, String, Double> chapter = chapters.get(j);
+				Triplet<String, Double, String> chapter = chapters.get(j);
 				
 				String chnr = chapter.z+"";
 				if (chnr.endsWith(".0")) { chnr = chnr.substring(0, chnr.lastIndexOf(".")); }
@@ -655,19 +498,17 @@ public class MangaFox {
 								
 								Files.waitOnFile(dst, 2);
 								
-								Files.moveFileUsingOS(file, dst);
+								try { Files.moveFileUsingOS(file, dst); } catch (Exception e) {}
 								
 								for (long m = 0, w = 50; m < 30000 && !dst.canWrite(); m += w) {
 									
 									try { Thread.sleep(w); } catch (Exception e) {}
 								}
-								
 							}
 							
 							Files.cleanseDir(chapdir.getAbsolutePath());
 							chapdir.delete();
 							chapdir = nchapdir;
-							
 						}
 						
 						break;
@@ -687,11 +528,11 @@ public class MangaFox {
 							
 							if (info.chsubs != null && info.chsubs.length() > 5) {
 								
-								saveChapterSubstituted(info.chsubs, chapter.z, info.title, chapname, chapter.y, chapdir);
+								saveChapterSubstituted(info.chsubs, chapter.y, info.title, chapname, chapter.x, chapdir);
 								
 							} else {
 							
-								saveChapter(info.title, chapname, chapter.y, chapdir);
+								saveChapter(info.title, chapname, chapter.x, chapdir);
 							}
 							
 							info.recentChapterMillis = System.currentTimeMillis();
@@ -728,7 +569,7 @@ public class MangaFox {
 			if (chsubs.contains("-page-")) { chsubs = chsubs.substring(0, chsubs.lastIndexOf("-page-"))+".html"; }
 			if (chsubs.contains("-chapter-")) { chsubs = chsubs.substring(0, chsubs.lastIndexOf("-chapter-"))+".html"; }
 			
-			MangaSeeOnline.saveChapter(chsubs+"-chapter-"+chapnrstr, chapdir);
+			main.MangaSeeOnline.saveChapter(chsubs+"-chapter-"+chapnrstr, chapdir);
 			
 		} else {
 			
@@ -1419,45 +1260,18 @@ public class MangaFox {
 			
 			public String getS(Object o) {
 				
-				if (o instanceof String) {
-					
-					return ((String)o).trim();
-				}
-				
-				if (o instanceof Result) {
-					
-					return ((Result)o).title.trim();
-				}
-				
-				if (o instanceof File) {
-					
-					return ((File)o).getName().trim();
-				}
-				
+				if (o instanceof String) { return ((String)o).trim(); }
+				if (o instanceof Result) { return ((Result)o).title.trim(); }
+				if (o instanceof File) { return ((File)o).getName().trim(); }
 				return o.toString();
 			}
 			
 			public int compare(String o1, String o2) {
 				
-				if (o1.toLowerCase().equals(t)) {
-					
-					return -1;
-				}
-				
-				if (o2.toLowerCase().equals(t)) {
-					
-					return 1;
-				}
-				
-				if (o1.toLowerCase().contains(t)) {
-					
-					return -1;
-				}
-				
-				if (o2.toLowerCase().contains(t)) {
-					
-					return 1;
-				}
+				if (o1.toLowerCase().equals(t)) { return -1; }
+				if (o2.toLowerCase().equals(t)) { return 1; }
+				if (o1.toLowerCase().contains(t)) { return -1; }
+				if (o2.toLowerCase().contains(t)) { return 1; }
 				
 				for (int i = words.length; i >= 1; i--) {
 					

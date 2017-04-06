@@ -18,6 +18,7 @@ import org.dom4j.io.SAXReader;
 
 import mangaLib.MangaInfo;
 import mangaLib.Poster;
+import mangaLib.scrapers.MangaFox;
 import visionCore.dataStructures.tuples.Tuple;
 import visionCore.util.Files;
 import visionCore.util.Web;
@@ -212,10 +213,10 @@ public class MAL extends mangaLib.MAL {
 						String url = info.url;
 						if (url == null || url.length() < 5) {
 							
-							url = MangaFox.findUrl(entry.title);
+							url = new MangaFox().searchManga(entry.title).get(0).url;
 						}
 						
-						info = MangaFox.getMangaInfo(url, info);
+						info = new MangaFox().getInfo(url, null, info);
 						
 						info.save(file);
 						

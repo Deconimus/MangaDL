@@ -1,4 +1,4 @@
-package main;
+package mangadl.deprecated;
 
 public class Result {
 
