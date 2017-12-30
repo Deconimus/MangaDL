@@ -21,6 +21,7 @@ import mangaLib.scrapers.Scraper;
 import visionCore.dataStructures.tuples.Triplet;
 import visionCore.util.ArrayUtils;
 import visionCore.util.Files;
+import visionCore.util.StringUtils;
 import visionCore.util.Web;
 
 public class Downloader {
@@ -51,19 +52,20 @@ public class Downloader {
 		System.out.println("Downloading or updating \""+info.title+"\"\n");
 		
 		
-		final MangaInfo pinfo = info.copy();
-		Thread t = new Thread(){
-			
-			{ setDaemon(true); }
-			
-			@Override
-			public void run() {
+		{
+			final MangaInfo pinfo = info.copy();
+			Thread t = new Thread(){
 				
-				downloadPosters(pinfo, url, html);
-			}
-		};
-		t.start();
-		
+				{ setDaemon(true); }
+				
+				@Override
+				public void run() {
+					
+					downloadPosters(pinfo, url, html);
+				}
+			};
+			t.start();
+		}
 		
 		List<Triplet<String, Double, String>> chapters = scraper.getChapters(html);
 		
@@ -82,13 +84,27 @@ public class Downloader {
 			
 			File lock = new File(f.getAbsolutePath().replace('\\', '/')+"/lock");
 			
-			if (f.listFiles().length > 0 && !lock.exists()) {
+			if (lock.exists()) {
+				
+				Files.deleteDir(f);
+				
+			} else if (info.bundled <= 1 && f.listFiles().length > 0) {
 				
 				completedChapters.put(nr, f);
 				
-			} else {
+			} else if (info.bundled > 1) {
 				
-				Files.deleteDir(f);
+				for (File imgfile : f.listFiles()) {
+					if (!ImageFormats.isSupported(imgfile)) { continue; }
+					
+					String imgnm = imgfile.getName().substring(0, imgfile.getName().lastIndexOf('.'));
+					while (imgnm.startsWith("0")) { imgnm = imgnm.substring(1, imgnm.length()); }
+					
+					int imgnr = -1;
+					try { imgnr = Integer.parseInt(imgnm); } catch (Exception e) {}
+					
+					if (imgnr > -1) { completedChapters.put((double)(imgnr + (int)((nr-1) * info.bundled)), f); }
+				}
 			}
 		}
 		
@@ -99,16 +115,16 @@ public class Downloader {
 		
 		for (Triplet<String, Double, String> chapter : chapters) {
 			
-			if (completedChapters.containsKey(chapter.y)) { 
+			if (completedChapters.containsKey(chapter.y)) {
 				
 				File f = completedChapters.get(chapter.y);
 				String ft = f.getName();
 				ft = ft.substring(ft.indexOf(" -")+2).trim();
 				
-				if (!chapter.z.trim().isEmpty() && !chapter.z.trim().toLowerCase().equals("new") 
+				if (info.bundled <= 1 && !chapter.z.trim().isEmpty() && !chapter.z.trim().toLowerCase().equals("new") 
 					&& !ft.equalsIgnoreCase(chapter.z) && !(new File(f.getAbsolutePath().replace('\\', '/')+"/.renamed").exists())) {
 					
-					String nn = (f.getName().substring(0, f.getName().indexOf(" - "))+" - "+chapter.z.trim()).trim();
+					String nn = (f.getName().substring(0, f.getName().indexOf(" -"))+" - "+chapter.z.trim()).trim();
 					File nd = new File(f.getParentFile().getAbsolutePath().replace('\\', '/')+"/"+nn);
 					
 					System.out.println("Renaming Ch."+chapter.y+" to \""+nn+"\".");
@@ -128,6 +144,18 @@ public class Downloader {
 			}
 			
 			String chapdirName = chapNrStr+" - "+chapter.z.trim();
+			
+			if (info.bundled > 1) {
+				
+				if (chapter.y != Math.floor(chapter.y) || Double.isInfinite(chapter.y) || Double.isNaN(chapter.y)) { continue; }
+				
+				int lb = (int)((chapter.y - 1) / info.bundled) * info.bundled + 1;
+				int ub = lb - 1 + info.bundled;
+				
+				chapNrStr = StringUtils.zfill(((int)((chapter.y-1) / info.bundled)+1)+"", 4);
+				
+				chapdirName = chapNrStr+" - Chapters "+lb+"-"+ub;
+			}
 			chapdirName = chapdirName.trim();
 			
 			File chapdir = new File(mangadir.getAbsolutePath().replace('\\', '/')+"/"+chapdirName);
@@ -136,7 +164,7 @@ public class Downloader {
 			System.out.println("Saving chapter "+nrs+" - \""+chapter.z.trim()+"\":\n");
 			System.out.println("URL: \""+chapter.x+"\"");
 			
-			downloadChapter(chapter.x, chapdir);
+			downloadChapter(info, chapter.x, chapter.y, chapdir);
 		}
 		
 		if (chapters.isEmpty()) { System.out.println("No chapters found.."); }
@@ -154,12 +182,12 @@ public class Downloader {
 	}
 	
 	
-	public static void downloadChapter(String url, File chapdir) {
+	public static void downloadChapter(MangaInfo info, String url, double chapNr, File chapdir) {
 		
-		downloadChapter(Scraper.getScraper(url), url, chapdir);
+		downloadChapter(Scraper.getScraper(url), info, url, chapNr, chapdir);
 	}
 	
-	public static void downloadChapter(Scraper scraper, String url, File chapdir) {
+	public static void downloadChapter(Scraper scraper, MangaInfo info, String url, double chapNr, File chapdir) {
 		
 		List<String> imgUrls = scraper.getChapterImgUrls(url);
 		
@@ -172,35 +200,49 @@ public class Downloader {
 		if (!lock.getParentFile().exists()) { lock.getParentFile().mkdirs(); }
 		if (!lock.exists()) { try { lock.createNewFile(); } catch (Exception e) {} }
 		
-		ExecutorService exec = Executors.newCachedThreadPool();
-		
 		System.out.println();
 		
-		try {
+		if (chlength > 1 && info.bundled <= 1) {
 		
-			for (int i = 0; i < chlength; i++) {
+			ExecutorService exec = Executors.newCachedThreadPool();
+					
+			try {
+			
+				for (int i = 0; i < chlength; i++) {
+					
+					final int imgnr = i+1;
+					final String urlf = imgUrls.get(i);
+					
+					exec.submit(new Runnable(){
+		
+						@Override
+						public void run() { downloadImage(imgnr, urlf, chapdir); }
+					});
+				}
 				
-				final int imgnr = i+1;
-				final String urlf = imgUrls.get(i);
+			} finally { exec.shutdown(); }
+			
+			try {
 				
-				exec.submit(new Runnable(){
-	
-					@Override
-					public void run() { downloadImage(imgnr, urlf, chapdir); }
-				});
+				exec.awaitTermination(30, TimeUnit.MINUTES);
+				
+			} catch (Exception | Error e) { e.printStackTrace(); }
+			
+		} else if (chlength > 0) {
+			
+			int imgnr = 1;
+			
+			if (info.bundled >= 1) {
+				
+				imgnr = (int)(chapNr) - ((int)((chapNr-1) / info.bundled) * info.bundled);
 			}
 			
-		} finally { exec.shutdown(); }
+			downloadImage(imgnr, imgUrls.get(0), chapdir);
+		}
 		
-		try {
-			
-			exec.awaitTermination(30, TimeUnit.MINUTES);
-			lock.delete();
-			
-		} catch (Exception | Error e) { e.printStackTrace(); }
+		lock.delete();
 		
 		System.out.println();
-		
 	}
 	
 	
@@ -215,7 +257,18 @@ public class Downloader {
 		for (int i = 0, l = imgnrStr.length(); i < 3-l; i++) { imgnrStr = "0"+imgnrStr; }
 		
 		File file = new File(chapdir.getAbsolutePath().replace('\\', '/')+"/"+(imgnrStr)+ext);
-		file = Web.downloadFile(url, file, true);
+		
+		for (int i = 0, end = 100; i < end; i++) {
+			
+			try {
+				
+				file = Web.downloadFile(url, file, true);
+				break;
+				
+			} catch (Exception e) { 
+				if (i == end-1) { e.printStackTrace(); }
+			}
+		}
 		
 		System.out.println("Saved "+file.getName());
 	}
