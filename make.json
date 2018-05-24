@@ -1,0 +1,21 @@
+{
+	"target": "jar",
+	"jarName": "mangadl.jar",
+	"outDirs": [
+		"release",
+		"C:/Program Files/MangAddict/res/bin/mangadl"
+	],
+	"main": "main.Main",
+	"imports": [
+		"../MangaLib",
+		"../VisionCore",
+		"../MangaLib/lib/dom4j-2.0.0-RC1.jar"
+	],
+	"javacOptions": [],
+	"packFiles": ["README.md", "LICENSE"],
+	
+	"jarShrink": {
+		"path": "C:/Program Files/jarShrink/jarShrink.jar",
+		"keep": ["mangaLib", "org.newdawn.slick.opengl"]
+	}
+}
