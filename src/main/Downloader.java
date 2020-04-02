@@ -32,6 +32,7 @@ public class Downloader {
 		String html = Web.tryGetHTML(url, 100, 60 * 1000, false);
 		
 		Scraper scraper = Scraper.getScraper(url);
+		
 		info = scraper.getInfo(url, html, info);
 		
 		File mangadir = new File(Main.mangapath+"/"+info.title);
@@ -138,9 +139,16 @@ public class Downloader {
 			String chapNrStr = (chapter.y == (int)((double)chapter.y)) ? ""+((int)((double)chapter.y)) : ""+chapter.y;
 			String nrs = chapNrStr;
 			
-			for (int i = 0, l = (""+(int)((double)chapter.y)).length(); i < 4-l; i++) {
+			for (int i = 0, l = (""+(int)((double)chapter.y)).length(); i < 4-l; ++i) {
 				
 				chapNrStr = "0"+chapNrStr;
+			}
+			
+			if (chapNrStr.contains(".")) {
+				for (int i = 0, l = chapNrStr.length(); i < 8-l; ++i) {
+					
+					chapNrStr = chapNrStr + "0";
+				}
 			}
 			
 			String chapdirName = chapNrStr+" - "+chapter.z.trim();
